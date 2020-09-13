@@ -1,63 +1,45 @@
-// RBAC testing with different authentication options
+// Role Based Access Control
 context('Standard RBAC', () => {
   before(() => {
+    // Start cypress server for intercepting & waiting on XHR calls
     cy.server();
-    cy.apiAuth('admin', 'portainer');
-    cy.setBrowserToken('admin');
     cy.visit('/');
-    // cy.frontendAuth('admin', 'portainer');
-    // cy.saveUserToken('admin');
-
-    // Wait for auth and redirection to the dashboard
-    cy.wait(1000);
-
-    // Not sure if needed
-    cy.saveLocalStorage();
   });
 
-  after(() => {
-    cy.restoreLocalStorage();
-    cy.setBrowserToken('admin');
-
-    // Cleanup remaining users and teams
-    cy.apiDeleteUsers();
-    cy.apiDeleteTeams();
-
-    // Clean Tokens
-    cy.clearUserTokens();
-  });
+  after(() => {});
 
   describe('Endpoint Admin', function () {
     beforeEach(() => {
-      // Start cypress server for XHR waiting
-      cy.server();
-      cy.restoreLocalStorage();
       cy.visit('/');
-      cy.wait(1000);
-      // Load Admin JWT
-      // cy.saveLocalStorage();
-      // Set endpoint state and endpointID to bypass selecting endpoint from home
-      // Logout Admin
+      cy.auth('frontend', 'admin', 'portainer');
     });
 
-    afterEach(() => {});
+    afterEach(() => {
+      // Cleanup remaining users and teams
+      cy.apiDeleteUsers();
+      cy.apiDeleteTeams();
+      // Clean Tokens
+      cy.clearUserTokens();
+    });
 
     it('User assigned as endpoint-admin against an endpoint', function () {
-      // load admin jwt
-      // Create user required for test
-      cy.apiCreateUser('adam', 'portainer');
-      cy.assignAccess('adam', 'user');
+      // Create and assign user as the administrator
+      cy.createUser('frontend', 'adam', 'portainer');
+      cy.createTeam('frontend', 'devs');
+      cy.assignToTeam('adam', 'devs');
+      cy.assignAccess('devs', 'team');
       cy.clearBrowserToken();
+
+      // Login and create, read, update, delete resources as user
       cy.visit('/');
-      cy.frontendAuth('adam', 'portainer');
+      cy.auth('frontend', 'adam', 'portainer');
       cy.selectEndpoint('local');
-      cy.wait(1000);
+
       // create resources
-      // cy.createResources();
+      cy.createResources('frontend');
       // modify resources
       // delete resources
-      // Cleanup user required for test
-      cy.apiDeleteUser('adam');
+      // cy.deleteResources();
     });
   });
 });
