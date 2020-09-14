@@ -282,28 +282,40 @@ Cypress.Commands.add('assignAccess', (entityName, entityType, role) => {
   cy.get('button[type=submit]').click();
 });
 
-Cypress.Commands.add('createStack', (location, waitForRedirection) => {
+Cypress.Commands.add('createStack', (location, endpointType, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit('/#!/1/docker/stacks/newstack');
     cy.waitUntil(() => cy.get('#stack_name'))
       .click()
       .type('stack');
-    cy.get('.CodeMirror-scroll')
-      .click({ force: true })
-      .type("version: '3'")
-      .type('{enter}')
-      .type('services:')
-      .type('{enter}')
-      .type('  test:')
-      .type('{enter}')
-      .type('  image: nginx');
+    if (endpointType == 'swarm') {
+      cy.get('.CodeMirror-scroll')
+        .click({ force: true })
+        .type("version: '3'")
+        .type('{enter}')
+        .type('services:')
+        .type('{enter}')
+        .type('  test:')
+        .type('{enter}')
+        .type('  image: nginx');
+    } else {
+      cy.get('.CodeMirror-scroll')
+        .click({ force: true })
+        .type("version: '2'")
+        .type('{enter}')
+        .type('services:')
+        .type('{enter}')
+        .type('  test:')
+        .type('{enter}')
+        .type('  image: nginx');
+    }
     cy.contains('Deploy the stack').click();
-    // Wait for redirection to services view
-    if (waitForRedirection == 'waitForRedirection') cy.waitUntil(() => cy.contains('Stacks list', { timeout: 120000 }));
+    // Wait for redirection to stacks view
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Stacks list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createService', (location, waitForRedirection) => {
+Cypress.Commands.add('createService', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit('/#!/1/docker/services/new');
     cy.waitUntil(() => cy.get('#service_name'))
@@ -312,11 +324,11 @@ Cypress.Commands.add('createService', (location, waitForRedirection) => {
     cy.get('input[name=image_name]').type('nginx:alpine');
     cy.contains('Create the service').click();
     // Wait for redirection to services view
-    if (waitForRedirection == 'waitForRedirection') cy.waitUntil(() => cy.contains('Service list', { timeout: 120000 }));
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Service list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createContainer', (location, waitForRedirection) => {
+Cypress.Commands.add('createContainer', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit('/#!/1/docker/containers/new');
     cy.waitUntil(() => cy.get('#container_name'))
@@ -325,11 +337,11 @@ Cypress.Commands.add('createContainer', (location, waitForRedirection) => {
     cy.get('input[name=image_name]').type('nginx:alpine');
     cy.contains('Deploy the container').click();
     // Wait for redirection to containers view
-    if (waitForRedirection == 'waitForRedirection') cy.waitUntil(() => cy.contains('Container list', { timeout: 120000 }));
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Container list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createNetwork', (location, waitForRedirection) => {
+Cypress.Commands.add('createNetwork', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit('/#!/1/docker/networks/new');
     cy.waitUntil(() => cy.get('#network_name'))
@@ -337,11 +349,11 @@ Cypress.Commands.add('createNetwork', (location, waitForRedirection) => {
       .type('network');
     cy.contains('Create the network').click();
     // Wait for redirection to networks view
-    if (waitForRedirection == 'waitForRedirection') cy.waitUntil(() => cy.contains('Network list', { timeout: 120000 }));
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Network list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createVolume', (location, waitForRedirection) => {
+Cypress.Commands.add('createVolume', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit('/#!/1/docker/volumes/new');
     cy.waitUntil(() => cy.get('#volume_name'))
@@ -349,11 +361,11 @@ Cypress.Commands.add('createVolume', (location, waitForRedirection) => {
       .type('volume');
     cy.contains('Create the volume').click();
     // Wait for redirection to volumes view
-    if (waitForRedirection == 'waitForRedirection') cy.waitUntil(() => cy.contains('Volume list', { timeout: 120000 }));
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Volume list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createConfig', (location, waitForRedirection) => {
+Cypress.Commands.add('createConfig', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit('/#!/1/docker/configs/new');
     cy.waitUntil(() => cy.get('#config_name'))
@@ -364,11 +376,11 @@ Cypress.Commands.add('createConfig', (location, waitForRedirection) => {
       .type('This is a config');
     cy.get('button').contains('Create config').click();
     // Wait for redirection to configs view
-    if (waitForRedirection == 'waitForRedirection') cy.waitUntil(() => cy.contains('Configs list', { timeout: 120000 }));
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Configs list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createSecret', (location, waitForRedirection) => {
+Cypress.Commands.add('createSecret', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit('/#!/1/docker/secrets/new');
     cy.waitUntil(() => cy.get('#secret_name'))
@@ -379,18 +391,25 @@ Cypress.Commands.add('createSecret', (location, waitForRedirection) => {
       .type('This is a secret');
     cy.contains('Create the secret').click();
     // Wait for redirection to secrets view
-    if (waitForRedirection == 'waitForRedirection') cy.waitUntil(() => cy.contains('Secrets list', { timeout: 120000 }));
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Secrets list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createResources', (location) => {
-  cy.createStack(location, 'waitForRedirection');
-  cy.createService(location, 'waitForRedirection');
-  cy.createContainer(location, 'waitForRedirection');
-  cy.createNetwork(location, 'waitForRedirection');
-  cy.createVolume(location, 'waitForRedirection');
-  cy.createConfig(location, 'waitForRedirection');
-  cy.createSecret(location, 'waitForRedirection');
+Cypress.Commands.add('modifyResource', (location, endpointType, method, resourceType) => {
+  // Dynamically call a custom cypress method on a resource of type 'resourceType'
+  cy[method + resourceType](location, endpointType);
+});
+
+Cypress.Commands.add('createResources', (location, endpointType) => {
+  const requiredResources = {
+    swarm: ['Stack', 'Service', 'Container', 'Network', 'Volume', 'Config', 'Secret'],
+    standalone: ['Stack', 'Container', 'Network', 'Volume'],
+    kubernetes: ['Application'],
+  };
+
+  for (var resource in requiredResources[endpointType]) {
+    cy.modifyResource(location, endpointType, 'create', requiredResources[endpointType][resource]);
+  }
 });
 
 Cypress.Commands.add('deleteResources', (location) => {

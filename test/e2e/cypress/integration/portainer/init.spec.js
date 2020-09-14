@@ -6,7 +6,7 @@ context('Init admin user test', () => {
   });
 
   describe('Init admin', function () {
-    it('Create user and verify success', function () {
+    it('Create admin user and verify success', function () {
       cy.initAdmin('admin', 'portainer');
       cy.url().should('include', 'init/endpoint');
       cy.saveLocalStorage();

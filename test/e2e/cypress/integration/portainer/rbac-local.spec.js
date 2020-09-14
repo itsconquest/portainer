@@ -1,5 +1,5 @@
 // Role Based Access Control
-context('Standard RBAC', () => {
+context('Standard RBAC tests against docker standalone', () => {
   before(() => {
     // Start cypress server for intercepting & waiting on XHR calls
     cy.server();
@@ -8,7 +8,7 @@ context('Standard RBAC', () => {
 
   after(() => {});
 
-  describe('Endpoint Admin', function () {
+  describe('Validate endpoint admin functionality', function () {
     beforeEach(() => {
       cy.visit('/');
       cy.auth('frontend', 'admin', 'portainer');
@@ -25,9 +25,7 @@ context('Standard RBAC', () => {
     it('User assigned as endpoint-admin against an endpoint', function () {
       // Create and assign user as the administrator
       cy.createUser('frontend', 'adam', 'portainer');
-      cy.createTeam('frontend', 'devs');
-      cy.assignToTeam('adam', 'devs');
-      cy.assignAccess('devs', 'team');
+      cy.assignAccess('adam', 'user');
       cy.clearBrowserToken();
 
       // Login and create, read, update, delete resources as user
@@ -36,7 +34,7 @@ context('Standard RBAC', () => {
       cy.selectEndpoint('local');
 
       // create resources
-      cy.createResources('frontend');
+      cy.createResources('frontend', 'standalone');
       // modify resources
       // delete resources
       // cy.deleteResources();
