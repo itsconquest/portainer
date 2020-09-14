@@ -1,7 +1,7 @@
 version: '3'
 services:
   cypress:
-    image: cypress/included:5.1.0
+    image: wconquest/cypress-included:latest
     container_name: e2e-cypress
     command: --browser chrome
     depends_on:
