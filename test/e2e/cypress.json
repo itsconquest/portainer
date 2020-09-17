@@ -1,5 +1,5 @@
 { 
-    "baseUrl": "http://e2e-portainer:9000",
+    "baseUrl": "http://localhost:9000",
     "testFiles": [
       "portainer/init.spec.js", "portainer/rbac-standalone.spec.js"
     ],
