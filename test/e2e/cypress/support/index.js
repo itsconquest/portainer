@@ -1,2 +1,1 @@
-import './frontendCommands';
-import './apiCommands';
+import './applicationCommands';
