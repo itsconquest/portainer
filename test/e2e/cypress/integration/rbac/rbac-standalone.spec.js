@@ -1,8 +1,6 @@
 // Role Based Access Control
-context('Standard RBAC tests against docker swarm', () => {
+context('Standard RBAC tests against docker standalone', () => {
   before(() => {
-    // Start cypress server for intercepting & waiting on XHR calls
-    cy.server();
     cy.visit('/');
   });
 
@@ -25,7 +23,7 @@ context('Standard RBAC tests against docker swarm', () => {
     it('User assigned as endpoint-admin against an endpoint', function () {
       // Create and assign user as the administrator
       cy.createUser('frontend', 'adam', 'portainer');
-      cy.assignAccess('adam', 'user');
+      cy.assignAccess('local', 'adam', 'user');
       cy.clearBrowserToken();
 
       // Login and create, read, update, delete resources as user
@@ -34,7 +32,7 @@ context('Standard RBAC tests against docker swarm', () => {
       cy.selectEndpoint('local');
 
       // create resources
-      cy.createResources('frontend', 'swarm');
+      cy.createResources('frontend', 'standalone');
       // modify resources
       // delete resources
       // cy.deleteResources();

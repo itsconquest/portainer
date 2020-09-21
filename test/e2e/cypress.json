@@ -1,7 +1,5 @@
 { 
     "baseUrl": "http://localhost:9000",
-    "testFiles": [
-      "portainer/init.spec.js", "portainer/rbac-standalone.spec.js"
-    ],
-    "video": false 
+    "video": false,
+    "experimentalNetworkStubbing": true
 }
