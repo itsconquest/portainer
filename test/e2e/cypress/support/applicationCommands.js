@@ -1,7 +1,10 @@
 import 'cypress-wait-until';
+import _ from 'lodash-es';
 
 let LOCAL_STORAGE_MEMORY = {};
 let USER_TOKENS = [];
+let ACTIVE_ENDPOINT_ID = '';
+let ACTIVE_ENDPOINT_TYPE = '';
 
 Cypress.Commands.add('saveLocalStorage', () => {
   Object.keys(localStorage).forEach((key) => {
@@ -53,20 +56,51 @@ Cypress.Commands.add('initEndpoint', () => {
   cy.get('[type=submit]').click();
 });
 
-Cypress.Commands.add('selectEndpoint', (Endpoint) => {
-  cy.contains(Endpoint).click();
+Cypress.Commands.add('addNewEndpoint', (endpointName, endpointType, endpointURL) => {
+  const addEndpoint = (endpointName, endpointType, endpointURL) => {
+    cy.contains(endpointType).click();
+    cy.get('input[name=container_name]').type(endpointName);
+    cy.get('input[name=endpoint_url]').clear().type(endpointURL);
+    cy.get('span').contains('Add endpoint').click();
+    cy.waitUntil(() => cy.contains('Endpoints'));
+  };
+
+  cy.visit('/#!/endpoints/new');
+  cy.waitUntil(() => cy.contains('Create endpoint'));
+  addEndpoint(endpointName, endpointType, endpointURL);
+});
+
+Cypress.Commands.add('selectEndpoint', (endpointName) => {
+  cy.visit('/#!/home');
+  cy.waitUntil(() => cy.contains(endpointName).click());
+  cy.waitUntil(() => cy.get('rd-header-title[title-text="Dashboard"]'));
+
+  // Get info from active endpoint for building URL's
+  cy.request({
+    method: 'GET',
+    url: '/api/endpoints?limit=10&start=1',
+    auth: {
+      bearer: USER_TOKENS['admin'],
+    },
+  })
+    .its('body')
+    .then((body) => {
+      let endpointOBJ = _.find(body, { Name: endpointName });
+      ACTIVE_ENDPOINT_ID = endpointOBJ.Id;
+      ACTIVE_ENDPOINT_TYPE = endpointOBJ.Type;
+      cy.log(ACTIVE_ENDPOINT_TYPE);
+    });
 });
 
 Cypress.Commands.add('auth', (location, username, password) => {
   if (location == 'frontend') {
-    // Setup auth route to wait for response
     cy.visit('/#/auth');
     cy.get('#username').click();
     cy.get('#username').type(username);
     cy.get('#password').type(password);
     cy.waitUntil(() => cy.get('ng-transclude > .ng-scope:nth-child(1)')).click();
-    // Wait until you hit the home screen
-    cy.waitUntil(() => cy.contains('Home')).saveUserToken(username);
+    // Wait until you hit the home screen and get at least 1 endpoint item
+    cy.waitUntil(() => cy.get('endpoint-item')).saveUserToken(username);
   } else {
     cy.request({
       method: 'POST',
@@ -85,7 +119,7 @@ Cypress.Commands.add('auth', (location, username, password) => {
 
 Cypress.Commands.add('createUser', (location, username, password) => {
   // Setup team route to wait for response
-  cy.route('POST', '**/users').as('users');
+  cy.route2({ method: 'POST', path: '**/users' }).as('users');
 
   if (location == 'frontend') {
     cy.visit('/#!/users');
@@ -167,7 +201,7 @@ Cypress.Commands.add('apiDeleteUsers', () => {
 Cypress.Commands.add('createTeam', (location, teamName) => {
   if (location == 'frontend') {
     // Setup team route to wait for response
-    cy.route('POST', '**/teams').as('teams');
+    cy.route2('POST', '**/teams').as('teams');
 
     cy.visit('/#!/teams');
     cy.get('#team_name').click().type(teamName);
@@ -254,10 +288,11 @@ Cypress.Commands.add('assignToTeam', (username, teamName) => {
 });
 
 // Navigate to the endpoints view and give the user/team access
-Cypress.Commands.add('assignAccess', (entityName, entityType, role) => {
+Cypress.Commands.add('assignAccess', (endpointName, entityName, entityType, role) => {
   cy.visit('/#!/endpoints');
-  // Click Manage Access in endpoint row
-  cy.clickLink('Manage access');
+  cy.contains('tr', endpointName).within(() => {
+    cy.clickLink('Manage access');
+  });
   // Click user/team dropdown
   cy.waitUntil(() => cy.get('.multiSelect > .ng-binding')).click();
 
@@ -282,9 +317,9 @@ Cypress.Commands.add('assignAccess', (entityName, entityType, role) => {
   cy.get('button[type=submit]').click();
 });
 
-Cypress.Commands.add('createStack', (location, endpointType, waitForRedirection = true) => {
+Cypress.Commands.add('createStack', (location, endpointType, endpointID, waitForRedirection = true) => {
   if (location == 'frontend') {
-    cy.visit('/#!/1/docker/stacks/newstack');
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/stacks/newstack`);
     cy.waitUntil(() => cy.get('#stack_name'))
       .click()
       .type('stack');
@@ -317,7 +352,7 @@ Cypress.Commands.add('createStack', (location, endpointType, waitForRedirection 
 
 Cypress.Commands.add('createService', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
-    cy.visit('/#!/1/docker/services/new');
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/services/new`);
     cy.waitUntil(() => cy.get('#service_name'))
       .click()
       .type('service');
@@ -330,7 +365,7 @@ Cypress.Commands.add('createService', (location, waitForRedirection = true) => {
 
 Cypress.Commands.add('createContainer', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
-    cy.visit('/#!/1/docker/containers/new');
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/containers/new`);
     cy.waitUntil(() => cy.get('#container_name'))
       .click()
       .type('container');
@@ -343,7 +378,7 @@ Cypress.Commands.add('createContainer', (location, waitForRedirection = true) =>
 
 Cypress.Commands.add('createNetwork', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
-    cy.visit('/#!/1/docker/networks/new');
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/networks/new`);
     cy.waitUntil(() => cy.get('#network_name'))
       .click()
       .type('network');
@@ -355,7 +390,7 @@ Cypress.Commands.add('createNetwork', (location, waitForRedirection = true) => {
 
 Cypress.Commands.add('createVolume', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
-    cy.visit('/#!/1/docker/volumes/new');
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/volumes/new`);
     cy.waitUntil(() => cy.get('#volume_name'))
       .click()
       .type('volume');
@@ -367,7 +402,7 @@ Cypress.Commands.add('createVolume', (location, waitForRedirection = true) => {
 
 Cypress.Commands.add('createConfig', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
-    cy.visit('/#!/1/docker/configs/new');
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/configs/new`);
     cy.waitUntil(() => cy.get('#config_name'))
       .click()
       .type('config');
@@ -382,7 +417,7 @@ Cypress.Commands.add('createConfig', (location, waitForRedirection = true) => {
 
 Cypress.Commands.add('createSecret', (location, waitForRedirection = true) => {
   if (location == 'frontend') {
-    cy.visit('/#!/1/docker/secrets/new');
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/secrets/new`);
     cy.waitUntil(() => cy.get('#secret_name'))
       .click()
       .type('secret');
