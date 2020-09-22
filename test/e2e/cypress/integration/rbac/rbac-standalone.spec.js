@@ -14,8 +14,8 @@ context('Standard RBAC tests against docker standalone', () => {
 
     afterEach(() => {
       // Cleanup remaining users and teams
-      cy.apiDeleteUsers();
-      cy.apiDeleteTeams();
+      cy.deleteUsers();
+      cy.deleteTeams();
       // Clean Tokens
       cy.clearUserTokens();
     });
@@ -32,10 +32,10 @@ context('Standard RBAC tests against docker standalone', () => {
       cy.selectEndpoint('local');
 
       // create resources
-      cy.createResources('frontend', 'standalone');
+      cy.modifyResources('frontend', 'create');
       // modify resources
       // delete resources
-      // cy.deleteResources();
+      cy.modifyResources('frontend', 'delete');
     });
   });
 });
