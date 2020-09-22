@@ -1,8 +1,6 @@
 // Role Based Access Control
 context('Standard RBAC tests against docker swarm', () => {
   before(() => {
-    // Start cypress server for intercepting & waiting on XHR calls
-    cy.server();
     cy.visit('/');
   });
 
@@ -16,8 +14,8 @@ context('Standard RBAC tests against docker swarm', () => {
 
     afterEach(() => {
       // Cleanup remaining users and teams
-      cy.apiDeleteUsers();
-      cy.apiDeleteTeams();
+      cy.deleteUsers();
+      cy.deleteTeams();
       // Clean Tokens
       cy.clearUserTokens();
     });
@@ -34,10 +32,10 @@ context('Standard RBAC tests against docker swarm', () => {
       cy.selectEndpoint('swarm');
 
       // create resources
-      cy.createResources('frontend', 'swarm');
+      cy.modifyResources('frontend', 'create');
       // modify resources
       // delete resources
-      // cy.deleteResources();
+      cy.modifyResources('frontend', 'delete');
     });
   });
 });

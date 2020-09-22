@@ -88,7 +88,6 @@ Cypress.Commands.add('selectEndpoint', (endpointName) => {
       let endpointOBJ = _.find(body, { Name: endpointName });
       ACTIVE_ENDPOINT_ID = endpointOBJ.Id;
       ACTIVE_ENDPOINT_TYPE = endpointOBJ.Type;
-      cy.log(ACTIVE_ENDPOINT_TYPE);
     });
 });
 
@@ -146,7 +145,7 @@ Cypress.Commands.add('createUser', (location, username, password) => {
   }
 });
 
-Cypress.Commands.add('apiDeleteUser', (username) => {
+Cypress.Commands.add('deleteUser', (username) => {
   cy.request({
     method: 'GET',
     url: '/api/users',
@@ -172,7 +171,7 @@ Cypress.Commands.add('apiDeleteUser', (username) => {
     });
 });
 
-Cypress.Commands.add('apiDeleteUsers', () => {
+Cypress.Commands.add('deleteUsers', () => {
   cy.request({
     method: 'GET',
     url: '/api/users',
@@ -222,7 +221,7 @@ Cypress.Commands.add('createTeam', (location, teamName) => {
   }
 });
 
-Cypress.Commands.add('apiDeleteTeam', (teamName) => {
+Cypress.Commands.add('deleteTeam', (teamName) => {
   cy.request({
     method: 'GET',
     url: '/api/teams',
@@ -248,7 +247,7 @@ Cypress.Commands.add('apiDeleteTeam', (teamName) => {
     });
 });
 
-Cypress.Commands.add('apiDeleteTeams', () => {
+Cypress.Commands.add('deleteTeams', () => {
   cy.request({
     method: 'GET',
     url: '/api/teams',
@@ -317,23 +316,13 @@ Cypress.Commands.add('assignAccess', (endpointName, entityName, entityType, role
   cy.get('button[type=submit]').click();
 });
 
-Cypress.Commands.add('createStack', (location, endpointType, endpointID, waitForRedirection = true) => {
+Cypress.Commands.add('createStack', (location, resourceName, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/stacks/newstack`);
     cy.waitUntil(() => cy.get('#stack_name'))
       .click()
-      .type('stack');
-    if (endpointType == 'swarm') {
-      cy.get('.CodeMirror-scroll')
-        .click({ force: true })
-        .type("version: '3'")
-        .type('{enter}')
-        .type('services:')
-        .type('{enter}')
-        .type('  test:')
-        .type('{enter}')
-        .type('  image: nginx');
-    } else {
+      .type(resourceName);
+    if (ACTIVE_ENDPOINT_TYPE == '1') {
       cy.get('.CodeMirror-scroll')
         .click({ force: true })
         .type("version: '2'")
@@ -343,19 +332,48 @@ Cypress.Commands.add('createStack', (location, endpointType, endpointID, waitFor
         .type('  test:')
         .type('{enter}')
         .type('  image: nginx');
+    } else {
+      cy.get('.CodeMirror-scroll')
+        .click({ force: true })
+        .type("version: '3'")
+        .type('{enter}')
+        .type('services:')
+        .type('{enter}')
+        .type('  test:')
+        .type('{enter}')
+        .type('  image: nginx');
     }
     cy.contains('Deploy the stack').click();
     // Wait for redirection to stacks view
-    if (waitForRedirection) cy.waitUntil(() => cy.contains('Stacks list', { timeout: 120000 }));
+    if (waitForRedirection) cy.waitUntil(() => cy.contains('Stacks list', { timeout: 60000 }));
   }
 });
 
-Cypress.Commands.add('createService', (location, waitForRedirection = true) => {
+Cypress.Commands.add('deleteStack', (location, resourceName) => {
+  if (location == 'frontend') {
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/stacks`);
+    cy.waitUntil(() => cy.contains('Stacks list', { timeout: 120000 })).showAllResources();
+    cy.contains(new RegExp('^' + resourceName + '$', 'g'))
+      .closest('tr')
+      .within(() => {
+        cy.get('input[type=checkbox]').click();
+      });
+    cy.contains('Remove').click();
+    cy.get('.modal-dialog').within(() => {
+      cy.get('button[class="btn btn-danger bootbox-accept"]').click();
+    });
+    cy.waitUntil(() => cy.contains('Stack successfully removed'));
+  } else {
+    cy.log('Delete stack via API');
+  }
+});
+
+Cypress.Commands.add('createService', (location, resourceName, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/services/new`);
     cy.waitUntil(() => cy.get('#service_name'))
       .click()
-      .type('service');
+      .type(resourceName);
     cy.get('input[name=image_name]').type('nginx:alpine');
     cy.contains('Create the service').click();
     // Wait for redirection to services view
@@ -363,12 +381,31 @@ Cypress.Commands.add('createService', (location, waitForRedirection = true) => {
   }
 });
 
-Cypress.Commands.add('createContainer', (location, waitForRedirection = true) => {
+Cypress.Commands.add('deleteService', (location, resourceName) => {
+  if (location == 'frontend') {
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/services`);
+    cy.waitUntil(() => cy.contains('Service list', { timeout: 120000 })).showAllResources();
+    cy.contains(new RegExp('^' + resourceName + '$', 'g'))
+      .closest('tr')
+      .within(() => {
+        cy.get('input[type=checkbox]').click();
+      });
+    cy.contains('Remove').click();
+    cy.get('.modal-dialog').within(() => {
+      cy.get('button[class="btn btn-danger bootbox-accept"]').click();
+    });
+    cy.waitUntil(() => cy.contains('Service successfully removed'));
+  } else {
+    cy.log('Delete service via API');
+  }
+});
+
+Cypress.Commands.add('createContainer', (location, resourceName, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/containers/new`);
     cy.waitUntil(() => cy.get('#container_name'))
       .click()
-      .type('container');
+      .type(resourceName);
     cy.get('input[name=image_name]').type('nginx:alpine');
     cy.contains('Deploy the container').click();
     // Wait for redirection to containers view
@@ -376,36 +413,85 @@ Cypress.Commands.add('createContainer', (location, waitForRedirection = true) =>
   }
 });
 
-Cypress.Commands.add('createNetwork', (location, waitForRedirection = true) => {
+Cypress.Commands.add('deleteContainer', (location, resourceName) => {
+  if (location == 'frontend') {
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/containers`);
+    cy.waitUntil(() => cy.contains('Container list', { timeout: 120000 })).showAllResources();
+    cy.contains(new RegExp('^' + resourceName + '$', 'g'))
+      .closest('tr')
+      .within(() => {
+        cy.get('input[type=checkbox]').click();
+      });
+    cy.contains('Remove').click();
+    cy.get('.modal-dialog').within(() => {
+      cy.get('button[class="btn btn-danger bootbox-accept"]').click();
+    });
+    cy.waitUntil(() => cy.contains('Container successfully removed'));
+  } else {
+    cy.log('Delete container via API');
+  }
+});
+
+Cypress.Commands.add('createNetwork', (location, resourceName, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/networks/new`);
     cy.waitUntil(() => cy.get('#network_name'))
       .click()
-      .type('network');
+      .type(resourceName);
     cy.contains('Create the network').click();
     // Wait for redirection to networks view
     if (waitForRedirection) cy.waitUntil(() => cy.contains('Network list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createVolume', (location, waitForRedirection = true) => {
+Cypress.Commands.add('deleteNetwork', (location, resourceName) => {
+  if (location == 'frontend') {
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/networks`);
+    cy.waitUntil(() => cy.contains('Network list', { timeout: 120000 })).showAllResources();
+    cy.contains(new RegExp('^' + resourceName + '$', 'g'))
+      .closest('tr')
+      .within(() => {
+        cy.get('input[type=checkbox]').click();
+      });
+    cy.contains('Remove').click();
+    cy.waitUntil(() => cy.contains('Network successfully removed'));
+  } else {
+  }
+});
+
+Cypress.Commands.add('createVolume', (location, resourceName, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/volumes/new`);
     cy.waitUntil(() => cy.get('#volume_name'))
       .click()
-      .type('volume');
+      .type(resourceName);
     cy.contains('Create the volume').click();
     // Wait for redirection to volumes view
     if (waitForRedirection) cy.waitUntil(() => cy.contains('Volume list', { timeout: 120000 }));
   }
 });
 
-Cypress.Commands.add('createConfig', (location, waitForRedirection = true) => {
+Cypress.Commands.add('deleteVolume', (location, resourceName) => {
+  if (location == 'frontend') {
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/volumes`);
+    cy.waitUntil(() => cy.contains('Volume list', { timeout: 120000 })).showAllResources();
+    cy.contains(new RegExp('^' + resourceName + '$', 'g'))
+      .closest('tr')
+      .within(() => {
+        cy.get('input[type=checkbox]').click();
+      });
+    cy.contains('Remove').click();
+    cy.waitUntil(() => cy.contains('Volume successfully removed'));
+  } else {
+  }
+});
+
+Cypress.Commands.add('createConfig', (location, resourceName, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/configs/new`);
     cy.waitUntil(() => cy.get('#config_name'))
       .click()
-      .type('config');
+      .type(resourceName);
     cy.waitUntil(() => cy.get('.CodeMirror-scroll'))
       .click()
       .type('This is a config');
@@ -415,12 +501,27 @@ Cypress.Commands.add('createConfig', (location, waitForRedirection = true) => {
   }
 });
 
-Cypress.Commands.add('createSecret', (location, waitForRedirection = true) => {
+Cypress.Commands.add('deleteConfig', (location, resourceName) => {
+  if (location == 'frontend') {
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/configs`);
+    cy.waitUntil(() => cy.contains('Configs list', { timeout: 120000 })).showAllResources();
+    cy.contains(new RegExp('^' + resourceName + '$', 'g'))
+      .closest('tr')
+      .within(() => {
+        cy.get('input[type=checkbox]').click();
+      });
+    cy.contains('Remove').click();
+    cy.waitUntil(() => cy.contains('Config successfully removed'));
+  } else {
+  }
+});
+
+Cypress.Commands.add('createSecret', (location, resourceName, waitForRedirection = true) => {
   if (location == 'frontend') {
     cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/secrets/new`);
     cy.waitUntil(() => cy.get('#secret_name'))
       .click()
-      .type('secret');
+      .type(resourceName);
     cy.waitUntil(() => cy.get('textarea'))
       .click()
       .type('This is a secret');
@@ -430,33 +531,45 @@ Cypress.Commands.add('createSecret', (location, waitForRedirection = true) => {
   }
 });
 
-Cypress.Commands.add('modifyResource', (location, endpointType, method, resourceType) => {
-  // Dynamically call a custom cypress method on a resource of type 'resourceType'
-  cy[method + resourceType](location, endpointType);
-});
-
-Cypress.Commands.add('createResources', (location, endpointType) => {
-  const requiredResources = {
-    swarm: ['Stack', 'Service', 'Container', 'Network', 'Volume', 'Config', 'Secret'],
-    standalone: ['Stack', 'Container', 'Network', 'Volume'],
-    kubernetes: ['Application'],
-  };
-
-  for (var resource in requiredResources[endpointType]) {
-    cy.modifyResource(location, endpointType, 'create', requiredResources[endpointType][resource]);
+Cypress.Commands.add('deleteSecret', (location, resourceName) => {
+  if (location == 'frontend') {
+    cy.visit(`/#!/${ACTIVE_ENDPOINT_ID}/docker/secrets`);
+    cy.waitUntil(() => cy.contains('Secrets list', { timeout: 120000 })).showAllResources();
+    cy.contains(new RegExp('^' + resourceName + '$', 'g'))
+      .closest('tr')
+      .within(() => {
+        cy.get('input[type=checkbox]').click();
+      });
+    cy.contains('Remove').click();
+    cy.waitUntil(() => cy.contains('Secret successfully removed'));
+  } else {
   }
 });
 
-Cypress.Commands.add('deleteResources', (location) => {
-  cy.deleteStack(location, 'waitForRedirection');
-  cy.deleteService(location, 'waitForRedirection');
-  cy.deleteContainer(location, 'waitForRedirection');
-  cy.deleteNetwork(location, 'waitForRedirection');
-  cy.deleteVolume(location, 'waitForRedirection');
-  cy.deleteConfig(location, 'waitForRedirection');
-  cy.deleteSecret(location, 'waitForRedirection');
+Cypress.Commands.add('modifyResource', (location, action, resourceType, resourceName) => {
+  // Dynamically call a custom cypress method on a resource of type 'resourceType'
+  cy[action + resourceType](location, resourceName);
 });
 
-Cypress.Commands.add('clickLink', (label) => {
+// Method for modifying all resources in an endpoint with the default names
+Cypress.Commands.add('modifyResources', (location, action) => {
+  const associatedResources = {
+    '1': ['Stack', 'Container', 'Network', 'Volume'],
+    '2': ['Stack', 'Service', 'Container', 'Network', 'Volume', 'Config', 'Secret'],
+    '3': ['Application'],
+  };
+  for (var res in associatedResources[ACTIVE_ENDPOINT_TYPE]) {
+    let resource = associatedResources[ACTIVE_ENDPOINT_TYPE][res];
+    cy.modifyResource(location, action, resource, resource.toLowerCase());
+  }
+});
+
+Cypress.Commands.add('clickLink', () => {
   cy.waitUntil(() => cy.contains('a', label)).click();
+});
+
+Cypress.Commands.add('showAllResources', () => {
+  cy.waitUntil(() => cy.contains('.limitSelector', 'Items per page')).within(() => {
+    cy.get('select').select('All');
+  });
 });
